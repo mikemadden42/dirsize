@@ -3,8 +3,8 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <string>
 #include <sstream>
+#include <string>
 
 namespace fs = std::filesystem;
 
@@ -28,10 +28,10 @@ uintmax_t calculate_directory_size(const fs::path& dir_path,
         }
     } catch (const fs::filesystem_error& e) {
         log_file << current_time() << " - Filesystem error: " << e.what()
-                 << std::endl;
+                 << " in directory: " << dir_path << std::endl;
     } catch (const std::exception& e) {
         log_file << current_time() << " - General exception: " << e.what()
-                 << std::endl;
+                 << " in directory: " << dir_path << std::endl;
     }
     return size;
 }
@@ -76,6 +76,9 @@ int main() {
             // Check if the entry is a directory and not hidden
             if (entry.is_directory() &&
                 entry.path().filename().string()[0] != '.') {
+                log_file << current_time()
+                         << " - Processing directory: " << entry.path()
+                         << std::endl;
                 uintmax_t dir_size =
                     calculate_directory_size(entry.path(), log_file);
                 std::cout << std::left << std::setw(30)
@@ -92,8 +95,7 @@ int main() {
                  << std::endl;
     }
 
-    // Close the log file
-    log_file.close();
-
+    // The log file will be closed automatically when the ofstream object is
+    // destroyed
     return 0;
 }
