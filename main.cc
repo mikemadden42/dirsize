@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <string>
@@ -6,7 +7,8 @@
 namespace fs = std::filesystem;
 
 // Function to calculate the size of a directory and its contents
-uintmax_t calculate_directory_size(const fs::path& dir_path) {
+uintmax_t calculate_directory_size(const fs::path& dir_path,
+                                   std::ofstream& log_file) {
     uintmax_t size = 0;
     try {
         for (const auto& entry : fs::recursive_directory_iterator(dir_path)) {
@@ -15,9 +17,9 @@ uintmax_t calculate_directory_size(const fs::path& dir_path) {
             }
         }
     } catch (const fs::filesystem_error& e) {
-        std::cerr << "Filesystem error: " << e.what() << std::endl;
+        log_file << "Filesystem error: " << e.what() << std::endl;
     } catch (const std::exception& e) {
-        std::cerr << "General exception: " << e.what() << std::endl;
+        log_file << "General exception: " << e.what() << std::endl;
     }
     return size;
 }
@@ -40,6 +42,15 @@ std::string human_readable_size(uintmax_t size) {
 }
 
 int main() {
+    // Open the log file for writing
+    std::ofstream log_file("dirsize_error.log", std::ios::app);
+
+    // Check if the log file was opened successfully
+    if (!log_file.is_open()) {
+        std::cerr << "Unable to open log file." << std::endl;
+        return 1;
+    }
+
     // Get the current directory
     fs::path current_path = fs::current_path();
 
@@ -49,7 +60,8 @@ int main() {
             // Check if the entry is a directory and not hidden
             if (entry.is_directory() &&
                 entry.path().filename().string()[0] != '.') {
-                uintmax_t dir_size = calculate_directory_size(entry.path());
+                uintmax_t dir_size =
+                    calculate_directory_size(entry.path(), log_file);
                 std::cout << std::left << std::setw(30)
                           << entry.path().filename().string()
                           << " Size: " << std::setw(10)
@@ -57,10 +69,13 @@ int main() {
             }
         }
     } catch (const fs::filesystem_error& e) {
-        std::cerr << "Filesystem error: " << e.what() << std::endl;
+        log_file << "Filesystem error: " << e.what() << std::endl;
     } catch (const std::exception& e) {
-        std::cerr << "General exception: " << e.what() << std::endl;
+        log_file << "General exception: " << e.what() << std::endl;
     }
+
+    // Close the log file
+    log_file.close();
 
     return 0;
 }
