@@ -1,10 +1,20 @@
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <sstream>
 
 namespace fs = std::filesystem;
+
+// Function to get current time as a string
+std::string current_time() {
+    std::time_t now = std::time(nullptr);
+    char buf[100];
+    std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
+    return {buf};
+}
 
 // Function to calculate the size of a directory and its contents
 uintmax_t calculate_directory_size(const fs::path& dir_path,
@@ -17,9 +27,11 @@ uintmax_t calculate_directory_size(const fs::path& dir_path,
             }
         }
     } catch (const fs::filesystem_error& e) {
-        log_file << "Filesystem error: " << e.what() << std::endl;
+        log_file << current_time() << " - Filesystem error: " << e.what()
+                 << std::endl;
     } catch (const std::exception& e) {
-        log_file << "General exception: " << e.what() << std::endl;
+        log_file << current_time() << " - General exception: " << e.what()
+                 << std::endl;
     }
     return size;
 }
@@ -30,20 +42,24 @@ std::string human_readable_size(uintmax_t size) {
     constexpr uintmax_t MB = KB * 1024;
     constexpr uintmax_t GB = MB * 1024;
 
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2);
+
     if (size >= GB) {
-        return std::to_string(size / GB) + " GB";
+        oss << static_cast<double>(size) / GB << " GB";
     } else if (size >= MB) {
-        return std::to_string(size / MB) + " MB";
+        oss << static_cast<double>(size) / MB << " MB";
     } else if (size >= KB) {
-        return std::to_string(size / KB) + " KB";
+        oss << static_cast<double>(size) / KB << " KB";
     } else {
-        return std::to_string(size) + " bytes";
+        oss << size << " bytes";
     }
+    return oss.str();
 }
 
 int main() {
     // Open the log file for writing
-    std::ofstream log_file("dirsize_error.log", std::ios::app);
+    std::ofstream log_file("error_log.txt", std::ios::app);
 
     // Check if the log file was opened successfully
     if (!log_file.is_open()) {
@@ -69,9 +85,11 @@ int main() {
             }
         }
     } catch (const fs::filesystem_error& e) {
-        log_file << "Filesystem error: " << e.what() << std::endl;
+        log_file << current_time() << " - Filesystem error: " << e.what()
+                 << std::endl;
     } catch (const std::exception& e) {
-        log_file << "General exception: " << e.what() << std::endl;
+        log_file << current_time() << " - General exception: " << e.what()
+                 << std::endl;
     }
 
     // Close the log file
