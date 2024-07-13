@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -34,12 +35,12 @@ void log_message(std::ofstream& log_file, LogLevel level,
 }
 
 // Function to calculate the size of a directory and its contents
-uintmax_t calculate_directory_size(const fs::path& dir_path,
-                                   std::ofstream& log_file) {
+std::optional<uintmax_t> calculate_directory_size(const fs::path& dir_path,
+                                                  std::ofstream& log_file) {
     uintmax_t size = 0;
     try {
         for (const auto& entry : fs::recursive_directory_iterator(dir_path)) {
-            if (fs::is_regular_file(entry.status())) {
+            if (fs::is_regular_file(entry)) {
                 size += fs::file_size(entry);
             }
         }
@@ -47,10 +48,12 @@ uintmax_t calculate_directory_size(const fs::path& dir_path,
         log_message(log_file, LogLevel::ERROR,
                     "Filesystem error: " + std::string(e.what()) +
                         " in directory: " + dir_path.string());
+        return std::nullopt;
     } catch (const std::exception& e) {
         log_message(log_file, LogLevel::ERROR,
                     "General exception: " + std::string(e.what()) +
                         " in directory: " + dir_path.string());
+        return std::nullopt;
     }
     return size;
 }
@@ -110,12 +113,18 @@ int main(int argc, char* argv[]) {
                 entry.path().filename().string()[0] != '.') {
                 log_message(log_file, LogLevel::INFO,
                             "Processing directory: " + entry.path().string());
-                uintmax_t dir_size =
-                    calculate_directory_size(entry.path(), log_file);
-                std::cout << std::left << std::setw(30)
-                          << entry.path().filename().string()
-                          << " Size: " << std::setw(10)
-                          << human_readable_size(dir_size) << std::endl;
+                if (auto dir_size =
+                        calculate_directory_size(entry.path(), log_file)) {
+                    std::cout << std::left << std::setw(30)
+                              << entry.path().filename().string()
+                              << " Size: " << std::setw(10)
+                              << human_readable_size(*dir_size) << std::endl;
+                } else {
+                    std::cout << std::left << std::setw(30)
+                              << entry.path().filename().string()
+                              << " Size: " << std::setw(10) << "Error"
+                              << std::endl;
+                }
             }
         }
     } catch (const fs::filesystem_error& e) {
