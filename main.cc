@@ -19,11 +19,10 @@ std::ostream& operator<<(std::ostream& os, LogLevel level) {
 // Function to get current time as a string
 std::string current_time() {
     auto now = std::chrono::system_clock::now();
-    auto time_t_now = std::chrono::system_clock::to_time_t(now);
-    std::tm buf;
-    localtime_r(&time_t_now, &buf);
+    std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+
     std::ostringstream oss;
-    oss << std::put_time(&buf, "%Y-%m-%d %H:%M:%S");
+    oss << std::put_time(std::localtime(&now_c), "%Y-%m-%d %H:%M:%S");
     return oss.str();
 }
 
