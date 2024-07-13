@@ -8,12 +8,22 @@
 
 namespace fs = std::filesystem;
 
+enum class LogLevel { INFO, ERROR };
+
 // Function to get current time as a string
 std::string current_time() {
     std::time_t now = std::time(nullptr);
     char buf[100];
     std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
     return {buf};
+}
+
+// Function to log messages with different levels
+void log_message(std::ofstream& log_file, LogLevel level,
+                 const std::string& message) {
+    log_file << current_time() << " - "
+             << (level == LogLevel::ERROR ? "ERROR" : "INFO") << ": " << message
+             << std::endl;
 }
 
 // Function to calculate the size of a directory and its contents
@@ -27,11 +37,13 @@ uintmax_t calculate_directory_size(const fs::path& dir_path,
             }
         }
     } catch (const fs::filesystem_error& e) {
-        log_file << current_time() << " - Filesystem error: " << e.what()
-                 << " in directory: " << dir_path << std::endl;
+        log_message(log_file, LogLevel::ERROR,
+                    "Filesystem error: " + std::string(e.what()) +
+                        " in directory: " + dir_path.string());
     } catch (const std::exception& e) {
-        log_file << current_time() << " - General exception: " << e.what()
-                 << " in directory: " << dir_path << std::endl;
+        log_message(log_file, LogLevel::ERROR,
+                    "General exception: " + std::string(e.what()) +
+                        " in directory: " + dir_path.string());
     }
     return size;
 }
@@ -57,28 +69,40 @@ std::string human_readable_size(uintmax_t size) {
     return oss.str();
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " <directory_path> <log_file_path>"
+                  << std::endl;
+        return 1;
+    }
+
+    fs::path directory_path = argv[1];
+    std::string log_file_path = argv[2];
+
     // Open the log file for writing
-    std::ofstream log_file("error_log.txt", std::ios::app);
+    std::ofstream log_file(log_file_path, std::ios::app);
 
     // Check if the log file was opened successfully
     if (!log_file.is_open()) {
-        std::cerr << "Unable to open log file." << std::endl;
+        std::cerr << "Unable to open log file: " << log_file_path << std::endl;
         return 1;
     }
 
     // Get the current directory
-    fs::path current_path = fs::current_path();
+    if (!fs::exists(directory_path) || !fs::is_directory(directory_path)) {
+        log_message(log_file, LogLevel::ERROR,
+                    "Invalid directory path: " + directory_path.string());
+        return 1;
+    }
 
     try {
-        // Iterate through the entries in the current directory
-        for (const auto& entry : fs::directory_iterator(current_path)) {
+        // Iterate through the entries in the specified directory
+        for (const auto& entry : fs::directory_iterator(directory_path)) {
             // Check if the entry is a directory and not hidden
             if (entry.is_directory() &&
                 entry.path().filename().string()[0] != '.') {
-                log_file << current_time()
-                         << " - Processing directory: " << entry.path()
-                         << std::endl;
+                log_message(log_file, LogLevel::INFO,
+                            "Processing directory: " + entry.path().string());
                 uintmax_t dir_size =
                     calculate_directory_size(entry.path(), log_file);
                 std::cout << std::left << std::setw(30)
@@ -88,11 +112,11 @@ int main() {
             }
         }
     } catch (const fs::filesystem_error& e) {
-        log_file << current_time() << " - Filesystem error: " << e.what()
-                 << std::endl;
+        log_message(log_file, LogLevel::ERROR,
+                    "Filesystem error: " + std::string(e.what()));
     } catch (const std::exception& e) {
-        log_file << current_time() << " - General exception: " << e.what()
-                 << std::endl;
+        log_message(log_file, LogLevel::ERROR,
+                    "General exception: " + std::string(e.what()));
     }
 
     // The log file will be closed automatically when the ofstream object is
