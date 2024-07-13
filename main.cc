@@ -1,28 +1,35 @@
-#include <ctime>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 namespace fs = std::filesystem;
 
 enum class LogLevel { INFO, ERROR };
 
+std::ostream& operator<<(std::ostream& os, LogLevel level) {
+    return os << (level == LogLevel::ERROR ? "ERROR" : "INFO");
+}
+
 // Function to get current time as a string
 std::string current_time() {
-    std::time_t now = std::time(nullptr);
-    char buf[100];
-    std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
-    return {buf};
+    auto now = std::chrono::system_clock::now();
+    auto time_t_now = std::chrono::system_clock::to_time_t(now);
+    std::tm buf;
+    localtime_r(&time_t_now, &buf);
+    std::ostringstream oss;
+    oss << std::put_time(&buf, "%Y-%m-%d %H:%M:%S");
+    return oss.str();
 }
 
 // Function to log messages with different levels
 void log_message(std::ofstream& log_file, LogLevel level,
-                 const std::string& message) {
-    log_file << current_time() << " - "
-             << (level == LogLevel::ERROR ? "ERROR" : "INFO") << ": " << message
+                 std::string_view message) {
+    log_file << current_time() << " - " << level << ": " << message
              << std::endl;
 }
 
