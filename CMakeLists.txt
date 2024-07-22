@@ -35,7 +35,7 @@ endif()
 
 # Define TSan build type flags
 if (MSVC)
-    message(FATAL_ERROR "ThreadSanitizer is not supported by MSVC")
+    message(WARNING "ThreadSanitizer is not supported by MSVC")
 else()
     set(CMAKE_CXX_FLAGS_TSAN "-fsanitize=thread")
     set(CMAKE_EXE_LINKER_FLAGS_TSAN "-fsanitize=thread")
@@ -43,7 +43,7 @@ endif()
 
 # Define MSan build type flags
 if (MSVC)
-    message(FATAL_ERROR "MemorySanitizer is not supported by MSVC")
+    message(WARNING "MemorySanitizer is not supported by MSVC")
 else()
     set(CMAKE_CXX_FLAGS_MSAN "-fsanitize=memory -fsanitize-memory-track-origins")
     set(CMAKE_EXE_LINKER_FLAGS_MSAN "-fsanitize=memory")
