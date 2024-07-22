@@ -115,8 +115,14 @@ function(add_custom_flags target)
             target_compile_options(${target} PRIVATE "/O2 /DEBUG")
             target_link_options(${target} PRIVATE "/DEBUG")
         else()
-            target_compile_options(${target} PRIVATE "-O2 -g")
-            target_link_options(${target} PRIVATE "-O2 -g")
+            target_compile_options(${target} PRIVATE "-g")  # Only add -g
+        endif()
+    elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
+        # Do not add any optimization flags, assume -O2 is already present
+        if (MSVC)
+            # Do nothing, use the default flags
+        else()
+            # Do nothing, use the default flags
         endif()
     endif()
 endfunction()
