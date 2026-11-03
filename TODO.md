@@ -66,5 +66,5 @@ Findings from a project review (2026-11-02). Suggested order of work:
       Add `add_test()` smoke tests (known tree size; bad path returns non-zero).
 - [x] Update `actions/checkout@v3` to v4 or later.
 - [x] Add a CI matrix (ubuntu, macos, windows) and an ASAN/UBSAN job.
-- [ ] Remove `rockyou2024.txt` / `rockyou2024.zip` from `.gitignore` (unrelated leftover).
-- [ ] Add build and usage instructions to `README.md`.
+- [x] Remove `rockyou2024.txt` / `rockyou2024.zip` from `.gitignore` (unrelated leftover).
+- [x] Add build and usage instructions to `README.md`.
