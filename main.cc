@@ -35,6 +35,14 @@ void log_message(std::ofstream& log_file, LogLevel level,
              << std::endl;
 }
 
+// Function to convert a path to UTF-8 for printing and logging. Unlike
+// path::string(), this doesn't throw on Windows for names that the current
+// code page can't represent. (u8string() returns std::u8string in C++20.)
+std::string path_to_utf8(const fs::path& path) {
+    auto utf8 = path.u8string();
+    return std::string(utf8.begin(), utf8.end());
+}
+
 // Function to calculate the size of a directory and its contents
 std::optional<uintmax_t> calculate_directory_size(const fs::path& dir_path,
                                                   std::ofstream& log_file) {
@@ -53,7 +61,7 @@ std::optional<uintmax_t> calculate_directory_size(const fs::path& dir_path,
             uintmax_t file_size = it->file_size(entry_ec);
             if (entry_ec) {
                 log_message(log_file, LogLevel::ERROR,
-                            "Unable to get size of: " + it->path().string() +
+                            "Unable to get size of: " + path_to_utf8(it->path()) +
                                 " (" + entry_ec.message() + ")");
             } else {
                 size += file_size;
@@ -65,7 +73,7 @@ std::optional<uintmax_t> calculate_directory_size(const fs::path& dir_path,
     if (ec) {
         log_message(log_file, LogLevel::ERROR,
                     "Filesystem error: " + ec.message() +
-                        " in directory: " + dir_path.string());
+                        " in directory: " + path_to_utf8(dir_path));
         return std::nullopt;
     }
     return size;
@@ -113,44 +121,52 @@ int main(int argc, char* argv[]) {
 
     // Get the current directory
     if (!fs::exists(directory_path) || !fs::is_directory(directory_path)) {
-        std::cerr << "Invalid directory path: " << directory_path.string()
+        std::cerr << "Invalid directory path: " << path_to_utf8(directory_path)
                   << std::endl;
         log_message(log_file, LogLevel::ERROR,
-                    "Invalid directory path: " + directory_path.string());
+                    "Invalid directory path: " + path_to_utf8(directory_path));
         return 1;
     }
+
+    // Set when any directory can't be sized or the listing stops early
+    bool had_error = false;
 
     try {
         // Iterate through the entries in the specified directory
         for (const auto& entry : fs::directory_iterator(directory_path)) {
+            std::string name = path_to_utf8(entry.path().filename());
+
             // Check if the entry is a directory and not hidden
-            if (entry.is_directory() &&
-                entry.path().filename().string()[0] != '.') {
+            if (entry.is_directory() && name[0] != '.') {
                 log_message(log_file, LogLevel::INFO,
-                            "Processing directory: " + entry.path().string());
+                            "Processing directory: " +
+                                path_to_utf8(entry.path()));
                 if (auto dir_size =
                         calculate_directory_size(entry.path(), log_file)) {
-                    std::cout << std::left << std::setw(30)
-                              << entry.path().filename().string()
+                    std::cout << std::left << std::setw(30) << name
                               << " Size: " << std::setw(10)
                               << human_readable_size(*dir_size) << std::endl;
                 } else {
-                    std::cout << std::left << std::setw(30)
-                              << entry.path().filename().string()
+                    std::cout << std::left << std::setw(30) << name
                               << " Size: " << std::setw(10) << "Error"
                               << std::endl;
+                    had_error = true;
                 }
             }
         }
     } catch (const fs::filesystem_error& e) {
+        std::cerr << "Listing stopped early: " << e.what() << std::endl;
         log_message(log_file, LogLevel::ERROR,
                     "Filesystem error: " + std::string(e.what()));
+        had_error = true;
     } catch (const std::exception& e) {
+        std::cerr << "Listing stopped early: " << e.what() << std::endl;
         log_message(log_file, LogLevel::ERROR,
                     "General exception: " + std::string(e.what()));
+        had_error = true;
     }
 
     // The log file will be closed automatically when the ofstream object is
     // destroyed
-    return 0;
+    return had_error ? 1 : 0;
 }

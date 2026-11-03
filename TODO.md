@@ -13,10 +13,10 @@ Findings from a project review (2026-11-02). Suggested order of work:
       Any permission error during the recursive walk throws away the running total.
       Use `fs::directory_options::skip_permission_denied` and the `std::error_code`
       overloads of `increment()` / `file_size()` so the walk skips the bad entry and keeps counting.
-- [ ] **Failures are invisible to the user.**
+- [x] **Failures are invisible to the user.**
   - [x] An invalid path is only written to the log file; nothing is printed to the terminal (`main.cc:101-105`).
-  - [ ] If the outer loop throws, the listing is silently cut short and the program still exits 0 (`main.cc:129-135`).
-- [ ] **Windows: a non-ASCII folder name can stop the listing.** `path::string()` can throw;
+  - [x] If the outer loop throws, the listing is silently cut short and the program still exits 0 (`main.cc:129-135`).
+- [x] **Windows: a non-ASCII folder name can stop the listing.** `path::string()` can throw;
       use `.u8string()` or catch per entry.
 - [x] **Missing includes:** `<cstdint>` (`uintmax_t`) and `<ctime>` (`std::time_t`, `std::localtime`).
 - [ ] Make the log file argument an optional flag instead of required.
