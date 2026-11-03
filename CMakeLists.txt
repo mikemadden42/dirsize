@@ -11,11 +11,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(DIRSIZE_BUILD_TYPES Debug Release RelWithDebInfo ASAN COVERAGE)
 if (NOT MSVC)
     list(APPEND DIRSIZE_BUILD_TYPES UBSAN TSAN)
-    # Apple Clang has no MemorySanitizer
-    if (NOT APPLE)
+    # MemorySanitizer needs LLVM Clang (not GCC or Apple Clang)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         list(APPEND DIRSIZE_BUILD_TYPES MSAN)
     endif()
 endif()
+
+# Record the list so the run-builds scripts can read it from CMakeCache.txt
+set(DIRSIZE_BUILD_TYPES "${DIRSIZE_BUILD_TYPES}" CACHE INTERNAL "Build types supported by this toolchain")
 
 get_property(IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if (IS_MULTI_CONFIG)

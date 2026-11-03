@@ -46,19 +46,19 @@ Findings from a project review (2026-11-02). Suggested order of work:
 
 ## Build scripts
 
-- [ ] **`run-builds.bat` reports every build as a success.** `%errorlevel%` inside the `for` block is expanded
+- [x] **`run-builds.bat` reports every build as a success.** `%errorlevel%` inside the `for` block is expanded
       before the loop runs. Use `!errorlevel!` or `if errorlevel 1`.
-- [ ] `run-builds.bash`:
-  - [ ] Check `cmake` and `cd` results; add `set -euo pipefail`.
-  - [ ] Quote variables.
-  - [ ] Use `cmake --build` instead of `make`.
-  - [ ] Make it work from any directory, not just the repo root.
-- [ ] `run-builds.ps1`:
-  - [ ] `$buildResult = cmake --build ...` hides build output and is never used.
-  - [ ] Check whether configure succeeded.
-  - [ ] Remove the redundant build-directory delete before the loop.
-- [ ] All scripts build sanitizer variants but never run them. Run `dirsize` on a sample tree after each sanitizer build.
-- [ ] Consider replacing the three scripts with `CMakePresets.json` and `cmake --workflow`.
+- [x] `run-builds.bash`:
+  - [x] Check `cmake` and `cd` results; add `set -euo pipefail`.
+  - [x] Quote variables.
+  - [x] Use `cmake --build` instead of `make`.
+  - [x] Make it work from any directory, not just the repo root.
+- [x] `run-builds.ps1`:
+  - [x] `$buildResult = cmake --build ...` hides build output and is never used.
+  - [x] Check whether configure succeeded.
+  - [x] Remove the redundant build-directory delete before the loop.
+- [x] All scripts build sanitizer variants but never run them. Run `dirsize` on a sample tree after each sanitizer build.
+- [ ] Consider replacing the three scripts with `CMakePresets.json` and `cmake --workflow` (deferred: kept the scripts for now).
 
 ## CI and repo hygiene
 
