@@ -26,23 +26,23 @@ Findings from a project review (2026-11-02). Suggested order of work:
 
 ## CMake (`CMakeLists.txt`)
 
-- [ ] **Sanitizer flags are applied twice** (e.g. `-fsanitize=address -fno-omit-frame-pointer` appears twice in the compile line).
+- [x] **Sanitizer flags are applied twice** (e.g. `-fsanitize=address -fno-omit-frame-pointer` appears twice in the compile line).
       `CMAKE_CXX_FLAGS_<CONFIG>` and `add_custom_flags()` both add them. Delete `add_custom_flags()`.
-- [ ] `add_custom_flags()` checks `CMAKE_BUILD_TYPE`, which multi-config generators (Visual Studio, Xcode) ignore.
+- [x] `add_custom_flags()` checks `CMAKE_BUILD_TYPE`, which multi-config generators (Visual Studio, Xcode) ignore.
       Use generator expressions (`$<CONFIG:ASAN>`) if it's kept.
-- [ ] **Fix MSVC flags:**
-  - [ ] `"/DEBUG /COVERAGE"` and `"/O2 /DEBUG"` are each passed as a single argument (`CMakeLists.txt:107,115`).
-  - [ ] `/DEBUG` is a linker flag; the compiler uses `/Zi`.
-  - [ ] `/COVERAGE` isn't an MSVC compiler flag.
-  - [ ] MSVC doesn't support `/fsanitize=undefined`.
-- [ ] Bump `cmake_minimum_required` from 3.10 to 3.16+ (`target_link_options` needs 3.13; CMake 4.x warns).
-- [ ] Replace `set(CMAKE_CXX_FLAGS ...)` with `target_compile_options(dirsize PRIVATE -Wall -Wextra -pedantic)`
+- [x] **Fix MSVC flags:**
+  - [x] `"/DEBUG /COVERAGE"` and `"/O2 /DEBUG"` are each passed as a single argument (`CMakeLists.txt:107,115`).
+  - [x] `/DEBUG` is a linker flag; the compiler uses `/Zi`.
+  - [x] `/COVERAGE` isn't an MSVC compiler flag.
+  - [x] MSVC doesn't support `/fsanitize=undefined`.
+- [x] Bump `cmake_minimum_required` from 3.10 to 3.16+ (`target_link_options` needs 3.13; CMake 4.x warns).
+- [x] Replace `set(CMAKE_CXX_FLAGS ...)` with `target_compile_options(dirsize PRIVATE -Wall -Wextra -pedantic)`
       so user/toolchain flags aren't overwritten.
-- [ ] RelWithDebInfo override drops `-DNDEBUG`; its linker flags `-O2 -g` do nothing.
-- [ ] MSAN build fails on macOS (`unsupported option '-fsanitize=memory'`); Apple Clang has no MemorySanitizer.
+- [x] RelWithDebInfo override drops `-DNDEBUG`; its linker flags `-O2 -g` do nothing.
+- [x] MSAN build fails on macOS (`unsupported option '-fsanitize=memory'`); Apple Clang has no MemorySanitizer.
       Skip it on Darwin.
-- [ ] TSAN/MSAN warnings print on every MSVC configure regardless of build type.
-- [ ] Set a default build type (e.g. Release) when `CMAKE_BUILD_TYPE` is empty.
+- [x] TSAN/MSAN warnings print on every MSVC configure regardless of build type.
+- [x] Set a default build type (e.g. Release) when `CMAKE_BUILD_TYPE` is empty.
 
 ## Build scripts
 
