@@ -9,7 +9,6 @@ cd /d "%~dp0"
 
 :: Directory for the builds
 set "BUILD_DIR=build"
-set "SAMPLE_DIR=%BUILD_DIR%\sample"
 
 :: Remove any existing build artifacts
 if exist "%BUILD_DIR%" rd /s /q "%BUILD_DIR%"
@@ -28,11 +27,6 @@ if not defined BUILD_TYPES (
     exit /b 1
 )
 set "BUILD_TYPES=%BUILD_TYPES:;= %"
-
-:: Sample tree for the smoke test: one 2 KB file in "sub", plus a hidden dir
-mkdir "%SAMPLE_DIR%\sub\nested"
-mkdir "%SAMPLE_DIR%\.hidden"
-powershell -NoProfile -Command "[System.IO.File]::WriteAllBytes('%SAMPLE_DIR%\sub\nested\file', (New-Object byte[] 2048))"
 
 :: Initialize counters and lists for build results
 set /a success_count=0
@@ -81,7 +75,7 @@ if %failure_count% gtr 0 (
     exit /b 0
 )
 
-:: Configure, build and run dirsize for one build type
+:: Configure, build and smoke-test one build type
 :build_and_test
 set "TYPE=%~1"
 set "DIR=%BUILD_DIR%\%TYPE%"
@@ -91,17 +85,7 @@ if errorlevel 1 exit /b 1
 cmake --build "%DIR%" --config %TYPE%
 if errorlevel 1 exit /b 1
 
-:: Multi-config generators (Visual Studio) put the binary in a per-config folder
-set "EXE=%DIR%\%TYPE%\dirsize.exe"
-if not exist "%EXE%" set "EXE=%DIR%\dirsize.exe"
-
-:: Sanitizer errors make dirsize exit non-zero
-"%EXE%" "%SAMPLE_DIR%" "%DIR%\dirsize.log" > "%DIR%\output.txt"
+:: Sanitizer errors make the smoke tests fail
+ctest --test-dir "%DIR%" -C %TYPE% --output-on-failure
 if errorlevel 1 exit /b 1
-type "%DIR%\output.txt"
-findstr /c:"2.00 KB" "%DIR%\output.txt" > nul
-if errorlevel 1 (
-    echo Unexpected output from dirsize.
-    exit /b 1
-)
 exit /b 0

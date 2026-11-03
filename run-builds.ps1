@@ -2,7 +2,6 @@
 
 # Paths are absolute so the script works from any directory
 $buildDir = Join-Path $PSScriptRoot "build"
-$sampleDir = Join-Path $buildDir "sample"
 
 # Remove any existing build artifacts
 if (Test-Path $buildDir) {
@@ -24,12 +23,7 @@ if (-not $match) {
 }
 $buildTypes = $match.Matches[0].Groups[1].Value -split ';'
 
-# Sample tree for the smoke test: one 2 KB file in "sub", plus a hidden dir
-New-Item -ItemType Directory -Path (Join-Path $sampleDir "sub\nested") -Force | Out-Null
-New-Item -ItemType Directory -Path (Join-Path $sampleDir ".hidden") -Force | Out-Null
-[System.IO.File]::WriteAllBytes((Join-Path $sampleDir "sub\nested\file"), (New-Object byte[] 2048))
-
-# Configure, build and run dirsize for one build type
+# Configure, build and smoke-test one build type
 function Invoke-BuildAndTest($buildType) {
     $dir = Join-Path $buildDir $buildType
 
@@ -39,21 +33,9 @@ function Invoke-BuildAndTest($buildType) {
     cmake --build $dir --config $buildType | Out-Host
     if ($LASTEXITCODE -ne 0) { return $false }
 
-    # Multi-config generators (Visual Studio) put the binary in a per-config folder
-    $exe = Join-Path $dir "$buildType\dirsize.exe"
-    if (-not (Test-Path $exe)) {
-        $exe = Join-Path $dir "dirsize.exe"
-    }
-
-    # Sanitizer errors make dirsize exit non-zero
-    $output = & $exe $sampleDir (Join-Path $dir "dirsize.log")
-    if ($LASTEXITCODE -ne 0) { return $false }
-    $output | Out-Host
-    if (-not ($output -match "2.00 KB")) {
-        Write-Host "Unexpected output from dirsize."
-        return $false
-    }
-    return $true
+    # Sanitizer errors make the smoke tests fail
+    ctest --test-dir $dir -C $buildType --output-on-failure | Out-Host
+    return ($LASTEXITCODE -eq 0)
 }
 
 # Initialize counters and lists for build results

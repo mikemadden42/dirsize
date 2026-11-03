@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 
 # Set the project name
 project(dirsize VERSION 1.0 LANGUAGES CXX)
@@ -72,6 +72,25 @@ add_executable(dirsize main.cc)
 if (NOT MSVC)
     target_compile_options(dirsize PRIVATE -Wall -Wextra -pedantic)
 endif()
+
+# MSVC's ASan runtime DLL lives next to cl.exe; copy it beside dirsize.exe
+# so ASAN builds run outside a Developer Command Prompt
+if (MSVC)
+    get_filename_component(MSVC_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+    file(GLOB ASAN_RUNTIME_DLLS "${MSVC_BIN_DIR}/clang_rt.asan_dynamic-*.dll")
+    if (ASAN_RUNTIME_DLLS)
+        add_custom_command(TARGET dirsize POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ASAN_RUNTIME_DLLS} $<TARGET_FILE_DIR:dirsize>)
+    endif()
+endif()
+
+# Smoke tests (run with ctest)
+enable_testing()
+add_test(NAME smoke
+    COMMAND ${CMAKE_COMMAND}
+        -DDIRSIZE=$<TARGET_FILE:dirsize>
+        -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/smoke
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/smoke.cmake)
 
 # macOS specific settings
 if (APPLE)
