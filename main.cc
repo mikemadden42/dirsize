@@ -1,4 +1,6 @@
 #include <chrono>
+#include <cstdint>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -37,20 +39,32 @@ void log_message(std::ofstream& log_file, LogLevel level,
 std::optional<uintmax_t> calculate_directory_size(const fs::path& dir_path,
                                                   std::ofstream& log_file) {
     uintmax_t size = 0;
-    try {
-        for (const auto& entry : fs::recursive_directory_iterator(dir_path)) {
-            if (fs::is_regular_file(entry)) {
-                size += fs::file_size(entry);
+    std::error_code ec;
+
+    // Skip unreadable subdirectories instead of failing the whole walk
+    fs::recursive_directory_iterator it(
+        dir_path, fs::directory_options::skip_permission_denied, ec);
+    const fs::recursive_directory_iterator end;
+
+    while (!ec && it != end) {
+        // Skip entries we can't stat or size, but keep counting the rest
+        std::error_code entry_ec;
+        if (it->is_regular_file(entry_ec)) {
+            uintmax_t file_size = it->file_size(entry_ec);
+            if (entry_ec) {
+                log_message(log_file, LogLevel::ERROR,
+                            "Unable to get size of: " + it->path().string() +
+                                " (" + entry_ec.message() + ")");
+            } else {
+                size += file_size;
             }
         }
-    } catch (const fs::filesystem_error& e) {
+        it.increment(ec);
+    }
+
+    if (ec) {
         log_message(log_file, LogLevel::ERROR,
-                    "Filesystem error: " + std::string(e.what()) +
-                        " in directory: " + dir_path.string());
-        return std::nullopt;
-    } catch (const std::exception& e) {
-        log_message(log_file, LogLevel::ERROR,
-                    "General exception: " + std::string(e.what()) +
+                    "Filesystem error: " + ec.message() +
                         " in directory: " + dir_path.string());
         return std::nullopt;
     }
@@ -99,6 +113,8 @@ int main(int argc, char* argv[]) {
 
     // Get the current directory
     if (!fs::exists(directory_path) || !fs::is_directory(directory_path)) {
+        std::cerr << "Invalid directory path: " << directory_path.string()
+                  << std::endl;
         log_message(log_file, LogLevel::ERROR,
                     "Invalid directory path: " + directory_path.string());
         return 1;
