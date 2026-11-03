@@ -1,8 +1,60 @@
-# List of build types
-$buildTypes = @("Debug", "Release", "ASAN", "UBSAN", "TSAN", "MSAN", "COVERAGE", "RelWithDebInfo")
+# Configure, build and smoke-test every build type this toolchain supports.
 
-# Directory for the build
-$buildDir = "build"
+# Paths are absolute so the script works from any directory
+$buildDir = Join-Path $PSScriptRoot "build"
+$sampleDir = Join-Path $buildDir "sample"
+
+# Remove any existing build artifacts
+if (Test-Path $buildDir) {
+    Remove-Item -Recurse -Force $buildDir
+}
+New-Item -ItemType Directory -Path $buildDir | Out-Null
+
+# Ask CMake which build types this toolchain supports
+$probeDir = Join-Path $buildDir "probe"
+cmake -S $PSScriptRoot -B $probeDir | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Write-Output "CMake probe configure failed."
+    exit 1
+}
+$match = Select-String -Path (Join-Path $probeDir "CMakeCache.txt") -Pattern '^DIRSIZE_BUILD_TYPES:INTERNAL=(.+)$'
+if (-not $match) {
+    Write-Output "Unable to read DIRSIZE_BUILD_TYPES from CMakeCache.txt"
+    exit 1
+}
+$buildTypes = $match.Matches[0].Groups[1].Value -split ';'
+
+# Sample tree for the smoke test: one 2 KB file in "sub", plus a hidden dir
+New-Item -ItemType Directory -Path (Join-Path $sampleDir "sub\nested") -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $sampleDir ".hidden") -Force | Out-Null
+[System.IO.File]::WriteAllBytes((Join-Path $sampleDir "sub\nested\file"), (New-Object byte[] 2048))
+
+# Configure, build and run dirsize for one build type
+function Invoke-BuildAndTest($buildType) {
+    $dir = Join-Path $buildDir $buildType
+
+    # Send tool output to the console so it isn't returned from the function
+    cmake -S $PSScriptRoot -B $dir "-DCMAKE_BUILD_TYPE=$buildType" | Out-Host
+    if ($LASTEXITCODE -ne 0) { return $false }
+    cmake --build $dir --config $buildType | Out-Host
+    if ($LASTEXITCODE -ne 0) { return $false }
+
+    # Multi-config generators (Visual Studio) put the binary in a per-config folder
+    $exe = Join-Path $dir "$buildType\dirsize.exe"
+    if (-not (Test-Path $exe)) {
+        $exe = Join-Path $dir "dirsize.exe"
+    }
+
+    # Sanitizer errors make dirsize exit non-zero
+    $output = & $exe $sampleDir (Join-Path $dir "dirsize.log")
+    if ($LASTEXITCODE -ne 0) { return $false }
+    $output | Out-Host
+    if (-not ($output -match "2.00 KB")) {
+        Write-Host "Unexpected output from dirsize."
+        return $false
+    }
+    return $true
+}
 
 # Initialize counters and lists for build results
 $successCount = 0
@@ -10,29 +62,11 @@ $failureCount = 0
 $successfulBuilds = @()
 $failedBuilds = @()
 
-# Create the build directory if it does not exist
-if (Test-Path $buildDir) {
-    Remove-Item -Recurse -Force $buildDir
-}
-New-Item -ItemType Directory -Name $buildDir
-
 # Loop through each build type
 foreach ($buildType in $buildTypes) {
     Write-Output "Building for type: $buildType"
 
-    # Remove any existing build artifacts
-    if (Test-Path $buildDir) {
-        Remove-Item -Recurse -Force $buildDir
-    }
-    New-Item -ItemType Directory -Name $buildDir
-    Set-Location -Path $buildDir
-
-    # Run CMake with the current build type
-    cmake -DCMAKE_BUILD_TYPE=$buildType ..
-
-    # Build the project
-    $buildResult = cmake --build . --config $buildType
-    if ($LASTEXITCODE -eq 0) {
+    if (Invoke-BuildAndTest $buildType) {
         Write-Output "$buildType build succeeded."
         $successfulBuilds += $buildType
         $successCount++
@@ -41,9 +75,6 @@ foreach ($buildType in $buildTypes) {
         $failedBuilds += $buildType
         $failureCount++
     }
-
-    # Go back to the root directory
-    Set-Location -Path ..
 }
 
 # Report the summary of builds
