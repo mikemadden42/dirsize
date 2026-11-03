@@ -62,9 +62,9 @@ Findings from a project review (2026-11-02). Suggested order of work:
 
 ## CI and repo hygiene
 
-- [ ] **CI "Test" step does nothing**: no tests are defined, so `ctest` passes trivially.
+- [x] **CI "Test" step does nothing**: no tests are defined, so `ctest` passes trivially.
       Add `add_test()` smoke tests (known tree size; bad path returns non-zero).
-- [ ] Update `actions/checkout@v3` to v4 or later.
-- [ ] Add a CI matrix (ubuntu, macos, windows) and an ASAN/UBSAN job.
+- [x] Update `actions/checkout@v3` to v4 or later.
+- [x] Add a CI matrix (ubuntu, macos, windows) and an ASAN/UBSAN job.
 - [ ] Remove `rockyou2024.txt` / `rockyou2024.zip` from `.gitignore` (unrelated leftover).
 - [ ] Add build and usage instructions to `README.md`.

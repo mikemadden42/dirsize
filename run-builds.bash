@@ -9,7 +9,6 @@ cd "$(dirname "$0")"
 
 # Directory for the builds
 BUILD_DIR="build"
-SAMPLE_DIR="$BUILD_DIR/sample"
 
 # Remove any existing build artifacts
 rm -rf "$BUILD_DIR"
@@ -24,26 +23,16 @@ if [ -z "$types" ]; then
 fi
 IFS=';' read -r -a BUILD_TYPES <<< "$types"
 
-# Sample tree for the smoke test: one 2 KB file in "sub", plus a hidden dir
-mkdir -p "$SAMPLE_DIR/sub/nested" "$SAMPLE_DIR/.hidden"
-head -c 2048 /dev/zero > "$SAMPLE_DIR/sub/nested/file"
-
-# Configure, build and run dirsize for one build type
+# Configure, build and smoke-test one build type
 build_and_test() {
 	local build_type=$1
 	local dir="$BUILD_DIR/$build_type"
-	local output
 
 	cmake -S . -B "$dir" -DCMAKE_BUILD_TYPE="$build_type" || return 1
 	cmake --build "$dir" --config "$build_type" || return 1
 
-	# Sanitizer errors make dirsize exit non-zero
-	output=$("$dir/dirsize" "$SAMPLE_DIR" "$dir/dirsize.log") || return 1
-	echo "$output"
-	if [[ $output != *"2.00 KB"* ]]; then
-		echo "Unexpected output from dirsize."
-		return 1
-	fi
+	# Sanitizer errors make the smoke tests fail
+	ctest --test-dir "$dir" -C "$build_type" --output-on-failure || return 1
 }
 
 # Initialize counters and arrays for build results
