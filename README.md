@@ -11,7 +11,9 @@ the files inside it (recursively). Hidden directories (names starting with
 dirsize <directory_path> <log_file_path>
 ```
 
-Progress and errors are appended to the log file. For example:
+Progress and errors are appended to the log file. The exit code is 1 if the
+path is invalid, a directory couldn't be sized (shown as `Error`), or the
+listing couldn't be completed. For example:
 
 ```
 $ dirsize ~/data dirsize.log
